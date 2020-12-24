@@ -1,15 +1,35 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyPlugin = require("copy-webpack-plugin");
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
+const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
+// const loader = require('sass-loader');
+
+const isProd = process.env.NODE_ENV === 'production';
+const isDev = !isProd;
+const filename = e => isDev ? `bundle.${e}` : `bundle.[hash].${e}`;
+
+const jsLoaders = () => {
+    const loaders = [
+        {
+            loader: 'babel-loader',
+            options: {
+                presets: ['@babel/preset-env'],
+            }
+        }
+    ];
+    if (isDev) {
+        loaders.push('eslint-loader');
+    }
+    return loaders;
+};
 
 module.exports = {
     context: path.resolve(__dirname, 'src'),
-    mode: 'development', 
-    entry: './index.js',
+    mode: 'development',
+    entry: ['@babel/polyfill', './index.js'],
     output: {
-        filename: 'bundel.[hash].js',
+        filename: filename('js'),
         path: path.resolve(__dirname, 'dist')
     },
     resolve: {
@@ -19,33 +39,59 @@ module.exports = {
             'core': path.resolve(__dirname, 'src/core'),
         }
     },
+    devtool: isDev ? 'source-map' : false,
+    devServer: {
+        port: 9000,
+        hot: isDev,
+        open: true,
+        openPage: ''
+    },
     plugins: [
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
-            template: 'index.html'
+            template: 'index.html',
+            minify: {
+                removeComments: isProd,
+                collapseWhitespace: isProd
+            }
         }),
         new CopyPlugin({
-            patterns: [
-              { 
-                  from:  path.resolve(__dirname, 'src/favicon.ico'), 
-                  to: path.resolve(__dirname, 'dist') 
-                },
-            ],
-          }),
-          new MiniCssExtractPlugin({
-              filename: 'bandel.[hash].css'
-          })
+            patterns: [{
+                from: path.resolve(__dirname, 'src/favicon.ico'),
+                to: path.resolve(__dirname, 'dist')
+            }],
+        }),
+        new MiniCssExtractPlugin({
+            filename: filename('css')
+        })
     ],
     module: {
-        rules: [
-          {
+        rules: [{
             test: /\.s[ac]ss$/i,
             use: [
                 MiniCssExtractPlugin.loader,
-              "css-loader",
-              "sass-loader"
+                'css-loader',
+                'sass-loader'
             ],
-          },
+        },
+            // {
+            //   test: /\.m?js$/,
+            //   exclude: /node_modules/,
+            //   use: {
+            //     loader: "babel-loader",
+            //     options: {
+            //       presets: ['@babel/preset-env'],
+
+            //     }
+            //   }
+            // }
+
+            {
+                test: /\.m?js$/,
+                exclude: /node_modules/,
+                use: jsLoaders(),
+            }
         ],
-      },
-}
+    },
+};
+
