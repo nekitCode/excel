@@ -1,3 +1,2 @@
 import './scss/index.scss';
-
-console.log('hello');
+// TODO: 26 8:43;
